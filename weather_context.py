@@ -23,10 +23,6 @@ class WeatherContext:
         - State codes should be in ISO 3166-2 format (e.g., "CA" for California)
         - Country codes should be in ISO 3166 format (e.g., "US", "GB", "IN")
         - For cities in the USA, it's recommended to include the state to avoid ambiguity
-        
-        Returns:
-        - Tuple of (latitude, longitude) if successful
-        - None if the location cannot be found or an error occurs
         """
         try:
             # Clean up the location string
@@ -41,7 +37,12 @@ class WeatherContext:
                 q = parts[0]
             elif len(parts) == 2:
                 # City and State/Country
-                q = f"{parts[0]},{parts[1]}"
+                state_or_country = parts[1].strip().upper()
+                # If it's a US state abbreviation, add US as country
+                if len(state_or_country) == 2 and state_or_country.isalpha():
+                    q = f"{parts[0]},{state_or_country},US"
+                else:
+                    q = f"{parts[0]},{state_or_country}"
             elif len(parts) == 3:
                 # City, State, and Country
                 q = f"{parts[0]},{parts[1]},{parts[2]}"
