@@ -1,123 +1,135 @@
-# LLaMA Chat with Multiple Personalities
+# Model Context Protocol (MCP) Implementation
 
-A Python-based chat interface for LLaMA that incorporates real-time weather and stock data, with support for multiple personality styles including Surrey Jack and Sidhu Moosewala.
+This project implements the Model Context Protocol (MCP) for managing context in AI applications. The implementation includes a base MCP server, client, and a specialized weather context server.
 
 ## Features
 
-- Interactive chat with LLaMA model through Ollama
-- Multiple personality options:
-  - Surrey Jack: Authentic Surrey/Vancouver slang and culture
-  - Sidhu Moosewala: Punjabi artist style with bilingual responses
-- Real-time weather data using OpenWeather API
-- Stock price information using Alpha Vantage API
-- Natural language processing for query understanding
-- Clean and simple command-line interface
+- **Base MCP Server**
+  - Context storage with different scopes (session, short-term, long-term)
+  - TTL-based context expiration
+  - CRUD operations for context management
+  - Error handling and validation
 
-## Prerequisites
+- **MCP Client**
+  - Server registration and management
+  - Simplified interface for context operations
+  - Multi-server support
 
-- Python 3.7 or higher
-- [Ollama](https://ollama.ai/) installed and running
-- OpenWeather API key
-- Alpha Vantage API key (optional, for stock data)
+- **Weather MCP Server**
+  - Weather data fetching and caching
+  - Structured data parsing
+  - Error handling for invalid locations
+  - Data validation
 
-## Setup
+## Components
 
-1. Clone the repository:
-   ```bash
-   git clone [your-repo-url]
-   cd llama-chat-context
-   ```
+### MCP Server (`mcp_server.py`)
 
-2. Install dependencies:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
+The base MCP server implementation provides:
 
-3. Configure API keys:
-   - Copy `config.json.example` to `config.json`
-   - Add your API keys to `config.json`:
-     ```json
-     {
-         "openweather_api_key": "your_openweather_api_key",
-         "alphavantage_api_key": "your_alphavantage_api_key"
-     }
-     ```
-
-## Available Chat Personalities
-
-### Surrey Jack Style
-Run with:
-```bash
-python3 chat_with_llama.py
+```python
+class MCPServer:
+    def __init__(self, server_id: str)
+    def store_context(self, key: str, value: Any, scope: str)
+    def retrieve_context(self, key: str, scope: str)
+    def handle_request(self, request: MCPRequest)
 ```
 
-Features:
-- Surrey/Vancouver area slang
-- Local cultural references
-- Street-style responses
-- Example queries:
-  - "What's the weather like in Surrey?"
-  - "How's Tesla stock doing fam?"
+### MCP Client (`mcp_client.py`)
 
-### Sidhu Moosewala Style
-Run with:
-```bash
-python3 chat_with_sidhu.py
+The client interface for interacting with MCP servers:
+
+```python
+class MCPClient:
+    def __init__(self)
+    def register_server(self, server_id: str, server: Any)
+    def query_context(self, server_id: str, key: str, scope: str)
+    def store_context(self, server_id: str, key: str, value: Any, scope: str)
 ```
 
-Features:
-- Bilingual responses (Punjabi-English mix)
-- References to Punjabi culture and music
-- Village life and traditional values
-- Example queries:
-  - "Mansa da weather ki kehnda?" (How's the weather in Mansa?)
-  - "Tesla de shares kiddan ja rahe ne?" (How are Tesla shares doing?)
+### Weather MCP Server (`weather_mcp_server.py`)
 
-## Example Interactions
+A specialized server for weather data:
 
-### Surrey Jack Style:
-```
-You: what's the weather in surrey?
-Your boy: Yo fam, lemme check that for you real quick! Weather in Surrey's looking mod today...
+```python
+class WeatherMCPServer(MCPServer):
+    def __init__(self, api_key: str)
+    def _handle_query(self, request: MCPRequest)
+    def _parse_weather_text(self, weather_text: str)
 ```
 
-### Sidhu Moosewala Style:
-```
-Tusi: pind ch ki haal ne?
-Sidhu: Kiddan paaji! Apne pind ch mausam ekdum vadiya aa...
+## Usage
+
+1. Initialize the MCP client:
+```python
+from mcp_client import MCPClient
+client = MCPClient()
 ```
 
-## Project Structure
+2. Create and register an MCP server:
+```python
+from weather_mcp_server import WeatherMCPServer
+weather_server = WeatherMCPServer(api_key)
+client.register_server("weather", weather_server)
+```
 
-- `chat_with_llama.py`: Surrey Jack personality interface
-- `chat_with_sidhu.py`: Sidhu Moosewala personality interface
-- `weather_context.py`: Weather data integration
-- `stock_context.py`: Stock data integration
-- `personalities/`: Personality configuration files
-  - `surrey_jack.py`: Surrey Jack personality
-  - `sidhu_moosewala.py`: Sidhu Moosewala personality
-- `test_*.py`: Test files for each component
-- `config.json`: API configuration file
+3. Query weather data:
+```python
+weather_data = client.query_context("weather", "Seattle")
+if weather_data:
+    print(f"Temperature: {weather_data['temperature']}°C")
+    print(f"Humidity: {weather_data['humidity']}%")
+    print(f"Description: {weather_data['description']}")
+```
 
 ## Testing
 
-Run the test scripts to verify API connections:
+Run the test suite:
 ```bash
-python3 test_weather_api.py
-python3 test_stock_api.py
-python3 test_chat_system.py
+python3 test_mcp.py -v
+```
+
+The test suite includes:
+- Basic MCP server operations
+- Client functionality
+- Weather server specific tests
+- Error handling cases
+
+## Error Handling
+
+The implementation includes comprehensive error handling:
+
+1. Invalid locations:
+```python
+{
+    "status": "error",
+    "data": {
+        "message": "Location not found",
+        "error_type": "location_not_found"
+    }
+}
+```
+
+2. Data validation:
+```python
+{
+    "status": "error",
+    "data": {
+        "message": "Invalid weather data format",
+        "error_type": "validation_error",
+        "required_fields": ["temperature", "humidity", "description"]
+    }
+}
 ```
 
 ## Contributing
 
-Contributions are welcome! Feel free to:
-- Add new personalities
-- Improve existing personalities
-- Enhance API integrations
-- Fix bugs or improve documentation
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the test suite
+5. Submit a pull request
 
 ## License
 
-MIT License - feel free to use and modify as needed. 
+MIT License 
