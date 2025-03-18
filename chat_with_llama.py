@@ -47,6 +47,13 @@ class ChatInterface:
                     weather_context = self.mcp_client.query_context("weather", city)
                     if weather_context:
                         context = f"Weather context: {json.dumps(weather_context)}\n{context or ''}"
+            else:
+                # Check if it's a stock-related query
+                symbol = extract_stock_symbol(prompt)
+                if symbol:
+                    stock_context = self.stock_context.generate_stock_context(symbol)
+                    if stock_context:
+                        context = f"Stock context: {stock_context}\n{context or ''}"
             
             # Build system prompt with context
             system_prompt = self._build_system_prompt(context)
@@ -119,20 +126,24 @@ def extract_stock_symbol(query: str) -> str:
     """Extract stock symbol from stock-related queries"""
     patterns = [
         r"(?:stock|share) (?:price )?(?:for |of )?([A-Za-z]+)(?:\?)?$",
-        r"how (?:much|is) (?:is |does )?([A-Za-z]+) (?:stock |share )?(?:cost|trading at|worth)(?:\?)?$",
+        r"how'?s? (?:is |does )?([A-Za-z]+) (?:stock |share )?(?:doing|cost|trading at|worth)(?:\?)?$",
         r"what'?s? (?:the )?(?:stock |share )?(?:price |value )?(?:of |for )?([A-Za-z]+)(?:\?)?$",
-        r"^([A-Za-z]+) (?:stock |share )?(?:price|value)(?:\?)?$"
+        r"^([A-Za-z]+) (?:stock |share )?(?:price|value)(?:\?)?$",
+        r"how'?s? ([A-Za-z]+) doing\??$"  # Added for "how's TSLA doing?"
     ]
     
-    query = query.lower()
+    # Return empty string for non-stock queries
+    if not any(stock_term in query.lower() for stock_term in ["stock", "share", "price", "value", "doing"]):
+        return ""
+    
     for pattern in patterns:
         match = re.search(pattern, query)
         if match:
             symbol = match.group(1).strip()
             # Ignore common words that might be matched
-            if symbol in ['stock', 'share', 'price', 'value']:
+            if symbol.lower() in ['stock', 'share', 'price', 'value', 'doing']:
                 continue
-            return symbol
+            return symbol.upper()
     return ""
 
 def main():
@@ -147,6 +158,9 @@ def main():
     
     print(WELCOME_MESSAGE)
     print("Chat interface initialized. Type 'exit' to quit.")
+    print("\nYou can ask about:")
+    print("- Weather: 'what's the weather in [city]?'")
+    print("- Stocks: 'what's the stock price of [symbol]?' or 'how's [symbol] doing?'")
     
     while True:
         try:
@@ -172,7 +186,7 @@ def main():
                 # Check if it's a stock-related query
                 symbol = extract_stock_symbol(user_input)
                 if symbol:
-                    print("\nPeepin them stocks fam...")
+                    print(f"\nPeepin them stocks fam... ({symbol})")
                     context = chat.stock_context.generate_stock_context(symbol)
             
             # Get response from model
